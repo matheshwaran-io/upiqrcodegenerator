@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UPI QR Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #2a2a3a;
+    --accent: #00e5a0;
+    --accent2: #7c5cfc;
+    --text: #f0f0f8;
+    --muted: #888899;
+    --input-bg: #1c1c28;
+  }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 40px 16px 60px;
+    background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(124,92,252,0.18) 0%, transparent 70%);
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.25);
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 30%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  h1 span { color: var(--accent); -webkit-text-fill-color: var(--accent); }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 8px;
+    font-weight: 400;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 480px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 0 60px rgba(124,92,252,0.08);
+  }
+
+  .field {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+
+  label .req { color: var(--accent); }
+
+  input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input::placeholder { color: #444455; }
+
+  input:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(124,92,252,0.15);
+  }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .generate-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent2), #a78bfa);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s, transform 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .generate-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+  .generate-btn:active { transform: translateY(0); }
+
+  .generate-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.08));
+  }
+
+  /* QR Output */
+  #qr-section {
+    display: none;
+    width: 100%;
+    max-width: 480px;
+    margin-top: 24px;
+  }
+
+  .qr-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .qr-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+  }
+
+  .qr-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  #qr-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 0 40px rgba(0,229,160,0.15);
+    margin-bottom: 18px;
+  }
+
+  #qr-box canvas, #qr-box img {
+    display: block;
+    border-radius: 4px;
+  }
+
+  .payee-info {
+    margin-bottom: 18px;
+  }
+
+  .payee-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .payee-upi {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+
+  .amount-pill {
+    display: inline-block;
+    background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.3);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 5px 16px;
+    border-radius: 20px;
+    margin-top: 6px;
+  }
+
+  .apps-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 14px 0 20px;
+    flex-wrap: wrap;
+  }
+
+  .app-tag {
+    font-size: 11px;
+    color: var(--muted);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .dl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.3);
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 24px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .dl-btn:hover { background: rgba(0,229,160,0.15); }
+
+  .upi-string {
+    margin-top: 16px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    word-break: break-all;
+    text-align: left;
+  }
+
+  .upi-string span { color: var(--accent2); }
+
+  .error-msg {
+    color: #ff6b6b;
+    font-size: 12px;
+    margin-top: 6px;
+    font-family: 'DM Mono', monospace;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">Universal • GPay • PhonePe • Paytm</div>
+  <h1>UPI <span>QR</span> Generator</h1>
+  <p class="subtitle">Scan with any UPI app — works everywhere in India</p>
+</header>
+
+<div class="card">
+  <div class="field">
+    <label>UPI ID <span class="req">*</span></label>
+    <input type="text" id="upi-id" placeholder="yourname@gpay or 9876543210@ybl" />
+    <div class="error-msg" id="upi-err">Please enter a valid UPI ID</div>
+  </div>
+
+  <div class="field">
+    <label>Your Name <span class="req">*</span></label>
+    <input type="text" id="name" placeholder="Maddy" />
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Amount (₹)</label>
+      <input type="number" id="amount" placeholder="Leave blank = any" min="0" />
+    </div>
+    <div class="field">
+      <label>Note</label>
+      <input type="text" id="note" placeholder="Payment for..." />
+    </div>
+  </div>
+
+  <button class="generate-btn" onclick="generateQR()">⚡ Generate QR Code</button>
+</div>
+
+<div id="qr-section">
+  <div class="qr-card">
+    <div class="qr-label">Scan to Pay</div>
+
+    <div class="payee-info">
+      <div class="payee-name" id="display-name">—</div>
+      <div class="payee-upi" id="display-upi">—</div>
+      <div id="display-amount"></div>
+    </div>
+
+    <div id="qr-box"></div>
+
+    <div class="apps-row">
+      <span class="app-tag">GPay</span>
+      <span class="app-tag">PhonePe</span>
+      <span class="app-tag">Paytm</span>
+      <span class="app-tag">BHIM</span>
+      <span class="app-tag">Amazon Pay</span>
+    </div>
+
+    <a class="dl-btn" id="dl-btn" download="upi-qr.png">↓ Download QR</a>
+
+    <div class="upi-string" id="upi-string-display"></div>
+  </div>
+</div>
+
+<script>
+function generateQR() {
+  const upiId = document.getElementById('upi-id').value.trim();
+  const name  = document.getElementById('name').value.trim();
+  const amount = document.getElementById('amount').value.trim();
+  const note  = document.getElementById('note').value.trim();
+  const errEl = document.getElementById('upi-err');
+
+  // Basic validation
+  if (!upiId || !upiId.includes('@')) {
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  if (!name) {
+    alert('Please enter your name.');
+    return;
+  }
+
+  // Build UPI string
+  let upiStr = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&cu=INR`;
+  if (amount) upiStr += `&am=${encodeURIComponent(amount)}`;
+  if (note)   upiStr += `&tn=${encodeURIComponent(note)}`;
+
+  // Update display info
+  document.getElementById('display-name').textContent = name;
+  document.getElementById('display-upi').textContent = upiId;
+
+  const amtEl = document.getElementById('display-amount');
+  if (amount) {
+    amtEl.innerHTML = `<div class="amount-pill">₹${parseFloat(amount).toLocaleString('en-IN')}</div>`;
+  } else {
+    amtEl.innerHTML = `<div class="amount-pill" style="color:var(--muted);border-color:var(--border)">Open Amount</div>`;
+  }
+
+  document.getElementById('upi-string-display').innerHTML =
+    `<span style="color:var(--muted);font-size:10px;">UPI String:</span><br>${upiStr.replace(/&/g, '<br><span style="color:var(--accent2)">  &</span>')}`;
+
+  // Generate QR
+  const qrBox = document.getElementById('qr-box');
+  qrBox.innerHTML = '';
+
+  new QRCode(qrBox, {
+    text: upiStr,
+    width: 220,
+    height: 220,
+    colorDark: '#111111',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  // Set download link after short delay (canvas renders async)
+  setTimeout(() => {
+    const canvas = qrBox.querySelector('canvas');
+    if (canvas) {
+      document.getElementById('dl-btn').href = canvas.toDataURL('image/png');
+    }
+  }, 300);
+
+  document.getElementById('qr-section').style.display = 'block';
+  document.getElementById('qr-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Allow Enter key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') generateQR();
+});
+</script>
+</body>
+</html>
